@@ -25,6 +25,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ── DEBUG: print actual secret values at runtime ──────────────
+      - name: Debug WIF config
+        run: |
+          echo "WIF_PROVIDER length : ${#WIF_PROVIDER}"
+          echo "WIF_PROVIDER value  : $WIF_PROVIDER"
+          echo "WIF_SA value        : $WIF_SERVICE_ACCOUNT"
+        env:
+          WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      # ─────────────────────────────────────────────────────────────
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
