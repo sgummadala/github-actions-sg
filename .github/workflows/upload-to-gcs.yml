@@ -1,0 +1,53 @@
+name: Upload to GCS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'files/**'
+  workflow_dispatch:
+    inputs:
+      file_path:
+        description: 'Specific file to upload (e.g. files/report.csv). Empty = upload all.'
+        required: false
+        default: ''
+
+jobs:
+  upload:
+    name: Upload files to Cloud Storage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload file(s) to GCS
+        run: |
+          BUCKET="${{ secrets.GCS_BUCKET_NAME }}"
+          DEST_PREFIX="${{ vars.GCS_DEST_PREFIX }}"
+          if [ -n "${{ github.event.inputs.file_path }}" ]; then
+            FILE="${{ github.event.inputs.file_path }}"
+            echo "Uploading: $FILE"
+            gsutil cp "$FILE" "gs://${BUCKET}/${DEST_PREFIX}$(basename $FILE)"
+          else
+            echo "Uploading all files from files/"
+            gsutil -m cp -r files/* "gs://${BUCKET}/${DEST_PREFIX}"
+          fi
+
+      - name: Confirm upload
+        run: |
+          echo "Bucket contents:"
+          gsutil ls "gs://${{ secrets.GCS_BUCKET_NAME }}/${{ vars.GCS_DEST_PREFIX }}"
